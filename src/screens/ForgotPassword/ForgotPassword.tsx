@@ -1,47 +1,108 @@
-// import React from "react";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
+import React from 'react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { authService } from '../../services/authService';
 
-export const ForgotPassword = (): JSX.Element => {
+interface ForgotPasswordProps {
+  onContinue: (email: string) => void;
+}
+
+export const ForgotPassword = ({ onContinue }: ForgotPasswordProps): JSX.Element => {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      setError('Veuillez entrer votre adresse email');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await authService.forgotPassword({ email });
+      
+      if (response.success) {
+        setSuccess(response.message);
+        setTimeout(() => {
+          onContinue(email);
+        }, 1500);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erreur lors de la demande');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
-    <div className="bg-white min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-md px-8">
-        <div className="text-center mb-12">
-          <header className="font-xtra-large-bold font-[number:var(--xtra-large-bold-font-weight)] text-grayscalegrayscale-100 text-[length:var(--xtra-large-bold-font-size)] tracking-[var(--xtra-large-bold-letter-spacing)] leading-[var(--xtra-large-bold-line-height)] [font-style:var(--xtra-large-bold-font-style)] mb-16">
-            Cartoon.com
-          </header>
-          
-          <h1 className="font-heading-h5-bold font-[number:var(--heading-h5-bold-font-weight)] text-grayscalegrayscale-100 text-[length:var(--heading-h5-bold-font-size)] tracking-[var(--heading-h5-bold-letter-spacing)] leading-[var(--heading-h5-bold-line-height)] [font-style:var(--heading-h5-bold-font-style)] mb-3">
-            Réinitialiser le mot de passe
-          </h1>
-          
-          <p className="font-medium-medium font-[number:var(--medium-medium-font-weight)] text-grayscalegrayscale-60 text-[length:var(--medium-medium-font-size)] tracking-[var(--medium-medium-letter-spacing)] leading-[var(--medium-medium-line-height)] [font-style:var(--medium-medium-font-style)]">
-            Récupérez le mot de passe de votre compte
-          </p>
-        </div>
+    <div className="w-full min-h-screen bg-white flex flex-col">
+      {/* Header */}
+      <div className="flex justify-center pt-8 pb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Cartoon.com</h1>
+      </div>
 
-        <form className="space-y-6">
-          <div className="space-y-2">
-            <Label className="font-small-medium font-[number:var(--small-medium-font-weight)] text-grayscalegrayscale-70 text-[length:var(--small-medium-font-size)] tracking-[var(--small-medium-letter-spacing)] leading-[var(--small-medium-line-height)] [font-style:var(--small-medium-font-style)]">
-              Adresse email
-            </Label>
-            
-            <div className="flex h-[52px] items-center px-4 py-0 bg-grayscalegrayscale-10 rounded-3xl border border-solid border-[#e8eaec]">
-              <Input
-                type="email"
-                placeholder="Entrez email adresse"
-                className="flex items-start flex-1 border-0 bg-transparent p-0 font-small-medium font-[number:var(--small-medium-font-weight)] text-grayscalegrayscale-60 text-[length:var(--small-medium-font-size)] tracking-[var(--small-medium-letter-spacing)] leading-[var(--small-medium-line-height)] [font-style:var(--small-medium-font-style)] placeholder:text-grayscalegrayscale-60 focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-            </div>
+      {/* Contenu principal centré */}
+      <div className="flex-1 flex flex-col justify-center items-center px-8">
+        <div className="w-full max-w-md">
+          {/* Titre et description */}
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Réinitialiser le mot de passe
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Récupérez le mot de passe de votre compte
+            </p>
           </div>
 
-          <Button className="w-full flex items-center justify-center px-8 py-4 bg-[#7b61ff] rounded-3xl h-auto hover:bg-[#6b51ef] border-0">
-            <span className="font-large-semibold font-[number:var(--large-semibold-font-weight)] text-grayscalegrayscale-10 text-[length:var(--large-semibold-font-size)] tracking-[var(--large-semibold-letter-spacing)] leading-[var(--large-semibold-line-height)] [font-style:var(--large-semibold-font-style)]">
-              Continuer
-            </span>
-          </Button>
-        </form>
+          {/* Formulaire */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+                {error}
+              </div>
+            )}
+            
+            {success && (
+              <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg">
+                {success}
+              </div>
+            )}
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Adresse email
+              </label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError('');
+                }}
+                placeholder="Entrez votre adresse email"
+                className="w-full px-4 py-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#7b61ff] focus:border-transparent text-lg"
+                required
+              />
+            </div>
+
+            <Button 
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center px-8 py-4 bg-[#7b61ff] rounded-3xl h-auto hover:bg-[#6b51ef] border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="font-semibold text-white text-lg">
+                {isLoading ? 'Envoi...' : 'Continuer'}
+              </span>
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -1,99 +1,146 @@
-import React, { useState, useRef } from "react";
-import { Button } from "../../components/ui/button";
+import React, { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { authService } from '../../services/authService';
 
-export const Verification = (): JSX.Element => {
-  const [code, setCode] = useState<string[]>(["", "", "", ""]);
+interface VerificationProps {
+  email: string;
+  onBack: () => void;
+  onNext: (token: string) => void;
+}
+
+export const Verification = ({ email, onBack, onNext }: VerificationProps): JSX.Element => {
+  const [code, setCode] = useState<string[]>(["", "", "", "", "", ""]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
+  const handleVerifyOTP = async () => {
+    const otpCode = code.join('');
+    
+    if (otpCode.length !== 6) {
+      setError('Veuillez entrer le code à 6 chiffres');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await authService.verifyOTP({
+        email,
+        otp: otpCode
+      });
+
+      if (response.success && response.token) {
+        onNext(response.token);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Code de vérification invalide');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const handleInputChange = (index: number, value: string) => {
-    if (value.length > 1) return; // Only allow single digit
+    // Ne garder que le dernier chiffre saisi
+    const newValue = value.replace(/\D/g, '').slice(-1);
     
     const newCode = [...code];
-    newCode[index] = value;
+    newCode[index] = newValue;
     setCode(newCode);
+    
+    if (error) setError('');
 
-    // Auto-focus next input
-    if (value && index < 3) {
+    // Auto-focus vers le champ suivant
+    if (newValue && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    // Handle backspace
-    if (e.key === "Backspace" && !code[index] && index > 0) {
+    if (e.key === 'Backspace' && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").slice(0, 4);
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     const newCode = [...code];
     
-    for (let i = 0; i < pastedData.length && i < 4; i++) {
-      if (/^\d$/.test(pastedData[i])) {
-        newCode[i] = pastedData[i];
-      }
+    for (let i = 0; i < pastedData.length && i < 6; i++) {
+      newCode[i] = pastedData[i];
     }
     
     setCode(newCode);
     
-    // Focus the next empty input or the last one
-    const nextEmptyIndex = newCode.findIndex(digit => !digit);
-    const focusIndex = nextEmptyIndex === -1 ? 3 : Math.min(nextEmptyIndex, 3);
+    // Focus sur le prochain champ vide ou le dernier
+    const nextEmptyIndex = newCode.findIndex(val => val === '');
+    const focusIndex = nextEmptyIndex === -1 ? 5 : Math.min(nextEmptyIndex, 5);
     inputRefs.current[focusIndex]?.focus();
   };
 
   return (
-    <div className="bg-white min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-md px-8">
-        <div className="text-center mb-12">
-          <header className="font-xtra-large-bold font-[number:var(--xtra-large-bold-font-weight)] text-grayscalegrayscale-100 text-[length:var(--xtra-large-bold-font-size)] tracking-[var(--xtra-large-bold-letter-spacing)] leading-[var(--xtra-large-bold-line-height)] [font-style:var(--xtra-large-bold-font-style)] mb-16">
-            Cartoon.com
-          </header>
-          
-          <h1 className="font-heading-h5-bold font-[number:var(--heading-h5-bold-font-weight)] text-grayscalegrayscale-100 text-[length:var(--heading-h5-bold-font-size)] tracking-[var(--heading-h5-bold-letter-spacing)] leading-[var(--heading-h5-bold-line-height)] [font-style:var(--heading-h5-bold-font-style)] mb-4">
-            Vérification de votre compte
-          </h1>
-          
-          <p className="font-medium-medium font-[number:var(--medium-medium-font-weight)] text-grayscalegrayscale-60 text-[length:var(--medium-medium-font-size)] tracking-[var(--medium-medium-letter-spacing)] leading-[var(--medium-medium-line-height)] [font-style:var(--medium-medium-font-style)] mb-8">
-            Nous venons de vous envoyer un code à 4 chiffres via votre e-mail exemple@gmail.com
-          </p>
-        </div>
+    <div className="w-full min-h-screen bg-white flex flex-col px-4 sm:px-6 lg:px-8">
+      {/* Header */}
+      <div className="flex justify-center pt-6 lg:pt-8 pb-4">
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Cartoon.com</h1>
+      </div>
 
-        <div className="space-y-8">
-          {/* Code Input Fields */}
-          <div className="flex justify-center gap-4">
+      {/* Contenu principal centré */}
+      <div className="flex-1 flex flex-col justify-center items-center">
+        <div className="w-full max-w-md">
+          {/* Titre et description */}
+          <div className="text-center mb-6 lg:mb-8">
+            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-3 lg:mb-4">
+              Vérification de votre compte
+            </h2>
+            <p className="text-gray-600 text-base lg:text-lg leading-relaxed px-2">
+              Nous venons de vous envoyer un code à 6 chiffres via votre e-mail {email}
+            </p>
+          </div>
+
+          {error && (
+            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg mb-4 lg:mb-6">
+              {error}
+            </div>
+          )}
+
+          {/* Champs de code */}
+          <div className="flex justify-center space-x-2 sm:space-x-4 mb-6 lg:mb-8">
             {code.map((digit, index) => (
               <input
                 key={index}
                 ref={(el) => (inputRefs.current[index] = el)}
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]*"
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleInputChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                className="w-16 h-16 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl focus:border-[#7b61ff] focus:outline-none transition-colors bg-gray-50"
+                className="w-12 h-12 sm:w-16 sm:h-16 text-center text-xl sm:text-2xl font-bold border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#7b61ff] focus:border-[#7b61ff] outline-none transition-all duration-200"
               />
             ))}
           </div>
 
-          {/* Buttons */}
+          {/* Boutons d'action */}
           <div className="space-y-4">
-            <Button className="w-full flex items-center justify-center px-8 py-4 bg-[#7b61ff] rounded-3xl h-auto hover:bg-[#6b51ef] border-0">
-              <span className="font-large-semibold font-[number:var(--large-semibold-font-weight)] text-grayscalegrayscale-10 text-[length:var(--large-semibold-font-size)] tracking-[var(--large-semibold-letter-spacing)] leading-[var(--large-semibold-line-height)] [font-style:var(--large-semibold-font-style)]">
-                Suivant
+            <Button 
+              onClick={handleVerifyOTP}
+              disabled={isLoading || code.some(digit => digit === '')}
+              className="w-full flex items-center justify-center px-6 lg:px-8 py-3 lg:py-4 bg-[#7b61ff] rounded-3xl h-auto hover:bg-[#6b51ef] border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="font-semibold text-white text-base lg:text-lg">
+                {isLoading ? 'Vérification...' : 'Suivant'}
               </span>
             </Button>
-
+            
             <Button
               variant="ghost"
+              onClick={onBack}
               className="w-full flex items-center justify-center h-auto p-0"
             >
-              <span className="font-medium-semibold font-[number:var(--medium-semibold-font-weight)] text-grayscalegrayscale-60 text-[length:var(--medium-semibold-font-size)] tracking-[var(--medium-semibold-letter-spacing)] leading-[var(--medium-semibold-line-height)] [font-style:var(--medium-semibold-font-style)]">
+              <span className="text-gray-600 text-base lg:text-lg">
                 Retour
               </span>
             </Button>
