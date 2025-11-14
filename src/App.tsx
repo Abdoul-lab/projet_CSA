@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Login } from './screens/Login';
 import { Register } from './screens/Register';
 import { ForgotPassword } from './screens/ForgotPassword';
 import { Verification } from './screens/Verification';
 import { ResetPassword } from './screens/ResetPassword/ResetPassword';
+import { Dashboard } from './screens/Dashboard';
 
 export const App = (): JSX.Element => {
-  const [currentScreen, setCurrentScreen] = useState<"login" | "register" | "forgot-password" | "verification" | "reset-password">("login");
+  const [currentScreen, setCurrentScreen] = useState<"login" | "register" | "forgot-password" | "verification" | "reset-password" | "dashboard">("login");
   const [userEmail, setUserEmail] = useState<string>('');
   const [resetToken, setResetToken] = useState<string>('');
 
@@ -21,6 +22,11 @@ export const App = (): JSX.Element => {
     setResetToken(token);
     setCurrentScreen("reset-password");
   };
+  const switchToDashboard = () => setCurrentScreen("dashboard");
+
+  if (currentScreen === "dashboard") {
+    return <Dashboard onLogout={switchToLogin} />;
+  }
 
   if (currentScreen === "reset-password") {
     return <ResetPassword token={resetToken} onSuccess={switchToLogin} />;
@@ -35,8 +41,8 @@ export const App = (): JSX.Element => {
   }
 
   if (currentScreen === "register") {
-    return <Register onSwitchToLogin={switchToLogin} />;
+    return <Register onSwitchToLogin={switchToLogin} onRegister={switchToDashboard} />;
   }
 
-  return <Login onSwitchToRegister={switchToRegister} onForgotPassword={switchToForgotPassword} />;
+  return <Login onSwitchToRegister={switchToRegister} onForgotPassword={switchToForgotPassword} onLoginSuccess={switchToDashboard} />;
 };
